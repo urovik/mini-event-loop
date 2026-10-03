@@ -1,0 +1,13 @@
+# 12-week plan
+- [ ] Week 1: blocking TCP echo server
+- [ ] Week 2: non-blocking + busy loop
+- [ ] Week 3: epoll event loop
+- [ ] Week 4: buffers & backpressure
+- [ ] Week 5: timers
+- [ ] Week 6: HTTP/1.1
+- [ ] Week 7: TCP chat (pub/sub)
+- [ ] Week 8: reliability (SIGPIPE, EINTR, valgrind)
+- [ ] Week 9: performance & profiling
+- [ ] Week 10: read nginx/Redis sources
+- [ ] Week 11: refactor & docs
+- [ ] Week 12: article + talk
