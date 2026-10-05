@@ -35,6 +35,8 @@ int main(void){
     }
 
     printf("listen on 127.0.0.1:6376\n");
+
+    while (1) {
         struct sockaddr_in addr_client;
         socklen_t len_client = sizeof(addr_client);
         int client_fd = accept(listen_fd, (struct sockaddr*) &addr_client, &len_client);
@@ -44,11 +46,10 @@ int main(void){
             return 1;
         }
         printf("client connected\n");
-    while (1){
     
         char buf[1024];
         ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
-        if(n < 0){
+        if(n == -1){
             perror("read");
         } 
         if(n == 0){
@@ -64,5 +65,4 @@ int main(void){
         printf("close");
         close(listen_fd);
         return 0;
-
 }
