@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 
 
 
@@ -16,6 +17,8 @@ int main(void){
         perror("failed create listen fd");
         return 1;
     }
+    int flags = fcntl(listen_fd, F_GETFL, 0);
+    fcntl(listen_fd,F_SETFL, flags | O_NONBLOCK);
 
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
@@ -41,9 +44,12 @@ int main(void){
         socklen_t len_client = sizeof(addr_client);
         int client_fd = accept(listen_fd, (struct sockaddr*) &addr_client, &len_client);
         if (client_fd < 0){
-            perror("failed create client_fd");
-            close(listen_fd);
-            return 1;
+            if (errno == EAGAIN || errno == EWOULDBLOCK){
+                usleep(1000);
+                continue;
+            }
+            perror("accept");
+            break;
         }
         printf("client connected\n");
     
