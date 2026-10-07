@@ -45,7 +45,7 @@ int main(void){
         int client_fd = accept(listen_fd, (struct sockaddr*) &addr_client, &len_client);
         if (client_fd < 0){
             if (errno == EAGAIN || errno == EWOULDBLOCK){
-                usleep(1000);
+                //usleep(1000);
                 continue;
             }
             perror("accept");
