@@ -1,6 +1,6 @@
 # 12-week plan
 - [+] Week 1: blocking TCP echo server
-- [ ] Week 2: non-blocking + busy loop
+- [+] Week 2: non-blocking + busy loop
 - [ ] Week 3: epoll event loop
 - [ ] Week 4: buffers & backpressure
 - [ ] Week 5: timers
