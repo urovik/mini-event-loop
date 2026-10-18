@@ -36,6 +36,52 @@ event_loop_t* loop_create(void){
     return loop;
 }
 
+int loop_run(event_loop_t *loop){
+    struct epoll_event events[MAX_EVENTS];
+    loop->running = 1;
+
+    while (loop->running){
+
+        int n = epoll_wait(loop->epfd, events, MAX_EVENTS, -1);
+        if (n < 0){
+            if(errno = EINTR) continue;
+            return -1;
+
+        }
+
+        if (n > 0){
+            for(int i = 0, i < n; i++){
+                int fd = events[i].data.fd;
+                uint32_t mask = events[i].events;
+
+                loop_entry* e = find_entry(loop, fd);
+                if (!e || !e->cb) continue;
+
+                event_cb_t cb = e->callback;
+                void *arg = e->arg;
+                cb(loop, fd, mask, arg);
+            }
+        }
+        return 0;
+        
+    }
+}
+
+void loop_destroy(event_loop_t *l) {
+    if (!l) return;
+    close(l->epfd);
+    free(l);
+}
+
+void loop_stop(event_loop_t *l) {
+    l->running = 0;
+}
+    
+
+
+    return 0;
+}
+
 static loop_entry* find_entry(event_loop_t *loop, int fd){
     for(int = 0; i < 1024; i++){
         if(loop->entry[i].fd == fd){
@@ -65,6 +111,7 @@ int loop_add(event_loop_t *loop, int fd, uint32_t events, event_cb_t cb, void *a
     if (!entry) {        
         epoll_ctl(loop->epfd, EPOLL_CTL_DEL, fd, NULL);
         return -1;
+
     entry->fd = fd;
     entry->events = events;
     entry->callback = cb;
