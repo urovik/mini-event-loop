@@ -1,24 +1,63 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include "loop.h"
 
+static void on_client(event_loop_t *l, int fd, uint32_t events, void *arg){
+    (void) arg;
+    (void) events;
+    char buf[1024];
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    if(n == -1){
+        if (errno != EAGAIN && errno != EWOULDBLOCK){
+            perror("read");
+            loop_del(l, fd);
+            close(fd);
+        }
+    } 
+    if(n == 0){
+        printf("client closed\n");
+        loop_del(l, fd);
+        close(fd);
+    }
+    if(n > 0){
+        buf[n] = '\0';
+        //printf("received: %s", buf);
+        write(fd, buf, n);
+    }
+}
 
+static void on_accept(event_loop_t *l, int fd, uint32_t events, void *arg){
+    (void) arg;
+    (void) events;
+
+    int clfd = accept(fd, NULL, NULL);
+    if(clfd < 0){
+        if(errno != EAGAIN && errno != EWOULDBLOCK){
+            perror("accept");
+        }
+        return;
+    } 
+    printf("client %d connected\n", clfd);
+    loop_add(l, clfd, EPOLLIN, on_client, NULL);
+}
 
 int main(void){
 
 
-    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int listen_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (listen_fd < 0){
         perror("failed create listen fd");
         return 1;
     }
-    int flags = fcntl(listen_fd, F_GETFL, 0);
-    fcntl(listen_fd,F_SETFL, flags | O_NONBLOCK);
+    int one = 1;
+    setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
@@ -37,38 +76,17 @@ int main(void){
         return 1;
     }
 
+    event_loop_t *loop = loop_create();
+    if (!loop) { perror("loop_create"); return 1; }
+
+    loop_add(loop, listen_fd, EPOLLIN, on_accept, NULL);
+
     printf("listen on 127.0.0.1:6376\n");
 
-    while (1) {
-        struct sockaddr_in addr_client;
-        socklen_t len_client = sizeof(addr_client);
-        int client_fd = accept(listen_fd, (struct sockaddr*) &addr_client, &len_client);
-        if (client_fd < 0){
-            if (errno == EAGAIN || errno == EWOULDBLOCK){
-                //usleep(1000);
-                continue;
-            }
-            perror("accept");
-            break;
-        }
-        printf("client connected\n");
+    loop_run(loop);
+
+    loop_destroy(loop);
+    close(listen_fd);
+
     
-        char buf[1024];
-        ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
-        if(n == -1){
-            perror("read");
-        } 
-        if(n == 0){
-            printf("client closed\n");
-            close(client_fd);
-        }
-        if(n > 0){
-            buf[n] = '\0';
-            //printf("received: %s", buf);
-            write(client_fd, buf, n);
-        }
-    }
-        printf("close");
-        close(listen_fd);
-        return 0;
 }

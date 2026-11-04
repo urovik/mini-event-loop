@@ -33,7 +33,7 @@ static loop_entry* find_entry(event_loop_t *loop, int fd){
 
 static struct loop_entry *find_free(event_loop_t *l) {
     for (int i = 0; i < 1024; i++) {
-        if (l->entry[i].fd == 0) return &l->entry[i];
+        if (l->entry[i].fd == -1) return &l->entry[i];
     }
     return NULL;
 }
@@ -42,6 +42,9 @@ event_loop_t* loop_create(void){
     event_loop_t* loop = malloc(sizeof(event_loop_t));
     if (!loop){
         return NULL;
+    }
+    for (int i = 0; i < 1024; i++) {
+        loop->entry[i].fd = -1;
     }
     loop->epfd = epoll_create1(0);
     if (loop->epfd < 0){
@@ -60,7 +63,7 @@ int loop_run(event_loop_t *loop){
 
         int n = epoll_wait(loop->epfd, events, MAX_EVENTS, -1);
         if (n < 0){
-            if(errno = EINTR) continue;
+            if(errno == EINTR) continue;
             return -1;
 
         }
@@ -110,12 +113,13 @@ int loop_add(event_loop_t *loop, int fd, uint32_t events, event_cb_t cb, void *a
     if (!entry) {        
         epoll_ctl(loop->epfd, EPOLL_CTL_DEL, fd, NULL);
         return -1;
+    }
 
     entry->fd = fd;
     entry->events = events;
     entry->callback = cb;
     entry->arg = arg;
-    }
+
     return 0;
 }
 
